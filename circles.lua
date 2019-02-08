@@ -1,7 +1,16 @@
+local CIRCLE = {}
 local blur = Material("pp/blurscreen")
 
-local CIRCLE = {}
+CIRCLE_FILLED = 0
+CIRCLE_OUTLINED = 1
+CIRCLE_BLURRED = 2
+
 CIRCLE.__index = CIRCLE
+CIRCLE.__tostring = function(self)
+	return string.format("Circle [%i][%i]", self.Type, self.Radius)
+end
+
+CIRCLE.Type = CIRCLE_FILLED
 
 CIRCLE.X = 0
 CIRCLE.Y = 0
@@ -42,6 +51,13 @@ function CIRCLE:SetRotation(rotation)
 	self.Vertices = nil
 end
 
+function CIRCLE:SetThickness(thicc)
+	if (self.Thickness == thicc) then return end
+
+	self.Thickness = thicc
+	self.InnerCircle = nil
+end
+
 function CIRCLE:SetPos(x, y)
 	if (self.X == x and self.Y == Y) then return end
 
@@ -54,8 +70,8 @@ end
 function CIRCLE:SetAngles(start, finish)
 	if (self.StartAngle == start and self.EndAngle == finish) then return end
 
-	self.StartAngle = math.max(0, math.min(360, start))
-	self.EndAngle = math.max(0, math.min(360, finish))
+	self.StartAngle = start
+	self.EndAngle = finish
 
 	self.Vertices = nil
 end
@@ -87,7 +103,7 @@ function CIRCLE:Calculate()
 	local x, y = self.X, self.Y
 	local start, finish = self.StartAngle, self.EndAngle
 
-	local verts, dist = {}, (2 * math.pi * r) / 360
+	local verts, dist = {}, 360 / (2 * math.pi * r / 2)
 
 	if (math.abs(start - finish) ~= 360) then
 		table.insert(verts, {
@@ -100,15 +116,14 @@ function CIRCLE:Calculate()
 	end
 
 	for a = start, finish + dist, dist do
-		local rot = math.rad(self.Rotation)
-		local rad = math.rad(math.Clamp(a, start, finish)) + rot
+		a = math.max(start, math.min(finish, a))
 
-		local sin = math.sin(rad)
-		local cos = math.cos(rad)
+		local rad = math.rad(a)
+		local rot = math.rad(self.Rotation)
 
 		table.insert(verts, {
-			x = x + cos * r,
-			y = y + sin * r,
+			x = x + math.cos(rad + rot) * r,
+			y = y + math.sin(rad + rot) * r,
 
 			u = math.cos(rad - rot) / 2 + 0.5,
 			v = math.sin(rad - rot) / 2 + 0.5,
@@ -210,12 +225,8 @@ end
 
 CIRCLE.Render = CIRCLE.Draw
 
-CIRCLE_FILLED = 0
-CIRCLE_OUTLINED = 1
-CIRCLE_BLURRED = 2
-
 function draw.CreateCircle(type)
 	return setmetatable({
-		Type = type or CIRCLE_FILLED,
+		Type = type,
 	}, CIRCLE)
 end
