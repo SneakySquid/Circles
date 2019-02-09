@@ -7,7 +7,7 @@ CIRCLE_BLURRED = 2
 
 CIRCLE.__index = CIRCLE
 CIRCLE.__tostring = function(self)
-	return string.format("Circle [%i][%i]", self.Type, self.Radius)
+	return string.format("Circle [%i][%i]", self.Type, self.R)
 end
 
 CIRCLE.Type = CIRCLE_FILLED
@@ -35,13 +35,11 @@ function CIRCLE:SetRadius(r)
 
 	self.R = r
 	self.Vertices = nil
+	self.InnerCircle = nil
 end
 
 function CIRCLE:SetDiameter(d)
-	if (self.R == d / 2) then return end
-
-	self.R = d / 2
-	self.Vertices = nil
+	self:SetRadius(d / 2)
 end
 
 function CIRCLE:SetRotation(rotation)
@@ -130,7 +128,14 @@ function CIRCLE:Calculate()
 		})
 	end
 
-	self.InnerCircle = nil
+	if (self.Type == CIRCLE_OUTLINED and not self.InnerCircle) then
+		local inner = draw.CreateCircle(CIRCLE_FILLED)
+		inner:SetRadius(r - self.Thickness)
+		inner:SetPos(x, y)
+
+		self.InnerCircle = inner
+	end
+
 	self.Vertices = verts
 end
 
@@ -155,14 +160,6 @@ function CIRCLE:Draw(outline)
 	local x, y, r = self.X, self.Y, self.R
 
 	if (self.Type == CIRCLE_OUTLINED) then
-		if not (self.InnerCircle) then
-			local cir = draw.CreateCircle(CIRCLE_FILLED)
-			cir:SetRadius(r - self.Thickness)
-			cir:SetPos(x, y)
-
-			self.InnerCircle = cir
-		end
-
 		render.ClearStencil()
 
 		render.SetStencilEnable(true)
