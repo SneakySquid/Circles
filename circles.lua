@@ -1,109 +1,123 @@
-local CIRCLE = {}
 local blur = Material("pp/blurscreen")
 
 CIRCLE_FILLED = 0
 CIRCLE_OUTLINED = 1
 CIRCLE_BLURRED = 2
 
+local CIRCLE = {}
 CIRCLE.__index = CIRCLE
-CIRCLE.__tostring = function(self)
-	return string.format("Circle [%i][%i]", self.Type, self.R)
+
+CIRCLE.m_iType = CIRCLE_FILLED
+
+CIRCLE.m_iX = 0
+CIRCLE.m_iY = 0
+CIRCLE.m_iR = 0
+
+CIRCLE.m_iRotation = 0
+CIRCLE.m_iThickness = 1
+CIRCLE.m_iQuality = 2
+CIRCLE.m_iDensity = 3
+
+CIRCLE.m_iStartAngle = 0
+CIRCLE.m_iEndAngle = 360
+
+AccessorFunc(CIRCLE, "m_iType", "Type", FORCE_NUMBER)
+AccessorFunc(CIRCLE, "m_iR", "Radius", FORCE_NUMBER)
+AccessorFunc(CIRCLE, "m_iVertices", "Vertices", FORCE_NUMBER)
+AccessorFunc(CIRCLE, "m_iRotation", "Rotation", FORCE_NUMBER)
+AccessorFunc(CIRCLE, "m_iThickness", "Thickness", FORCE_NUMBER)
+AccessorFunc(CIRCLE, "m_iQuality", "Quality", FORCE_NUMBER)
+AccessorFunc(CIRCLE, "m_iDensity", "Density", FORCE_NUMBER)
+
+function CIRCLE:__tostring()
+	return string.format("Circle: %p", self)
 end
-
-CIRCLE.Type = CIRCLE_FILLED
-
-CIRCLE.X = 0
-CIRCLE.Y = 0
-CIRCLE.R = 0
-
-CIRCLE.Rotation = 0
-CIRCLE.Thickness = 1
-CIRCLE.Quality = 2
-CIRCLE.Density = 3
-
-CIRCLE.StartAngle = 0
-CIRCLE.EndAngle = 360
-
-AccessorFunc(CIRCLE, "R", "Radius", FORCE_NUMBER)
-AccessorFunc(CIRCLE, "Rotation", "Rotation", FORCE_NUMBER)
-AccessorFunc(CIRCLE, "Thickness", "Thickness", FORCE_NUMBER)
-AccessorFunc(CIRCLE, "Quality", "Quality", FORCE_NUMBER)
-AccessorFunc(CIRCLE, "Density", "Density", FORCE_NUMBER)
 
 function CIRCLE:SetRadius(r)
-	if (self.R == r) then return end
+	if (self.m_iR == r) then return end
 
-	self.R = r
-	self.Vertices = nil
-	self.InnerCircle = nil
+	self.m_iR = r
+	self.m_tVertices = nil
+	self.m_cInnerCircle = nil
 end
 
-function CIRCLE:SetDiameter(d)
-	self:SetRadius(d / 2)
+function CIRCLE:SetVertices(vertices)
+	vertices = math.Clamp(vertices, 3, 360)
+
+	if (self.m_iVertices == vertices) then return end
+
+	self.m_iVertices = vertices
+	self.m_iSteps = 360 / vertices
+
+	self.m_tVertices = nil
+	self.m_cInnerCircle = nil
 end
 
 function CIRCLE:SetRotation(rotation)
-	if (self.Rotation == rotation) then return end
+	if (self.m_iRotation == rotation) then return end
 
-	self.Rotation = rotation
-	self.Vertices = nil
+	self.m_iRotation = rotation
+	self.m_tVertices = nil
+	self.m_cInnerCircle = nil
 end
 
 function CIRCLE:SetThickness(thicc)
-	if (self.Thickness == thicc) then return end
+	if (self.m_iThickness == thicc) then return end
 
-	self.Thickness = thicc
-	self.InnerCircle = nil
+	self.m_iThickness = thicc
+	self.m_cInnerCircle = nil
 end
 
 function CIRCLE:SetPos(x, y)
-	if (self.X == x and self.Y == Y) then return end
+	if (self.m_iX == x and self.m_iY == Y) then return end
 
-	self.X = x
-	self.Y = y
+	self.m_iX = x
+	self.m_iY = y
 
-	self.Vertices = nil
+	self.m_tVertices = nil
+	self.m_cInnerCircle = nil
 end
 
 function CIRCLE:SetAngles(start, finish)
-	if (self.StartAngle == start and self.EndAngle == finish) then return end
+	if (self.m_iStartAngle == start and self.m_iEndAngle == finish) then return end
 
-	self.StartAngle = start
-	self.EndAngle = finish
+	self.m_iStartAngle = math.min(start, finish)
+	self.m_iEndAngle = math.max(start, finish)
 
-	self.Vertices = nil
-end
-
-function CIRCLE:ScaleVertices(x, y)
-	if not (self.Vertices) then
-		self:Calculate()
-	end
-
-	for i, v in ipairs(self.Vertices) do
-		v.x = v.x * x
-		v.y = v.y * y
-	end
+	self.m_tVertices = nil
+	self.m_cInnerCircle = nil
 end
 
 function CIRCLE:OffsetVertices(x, y)
-	if not (self.Vertices) then
+	if (not self.m_tVertices) then
 		self:Calculate()
 	end
 
-	for i, v in ipairs(self.Vertices) do
+	self.m_iX = self.m_iX + x
+	self.m_iY = self.m_iY + y
+
+	for i, v in ipairs(self.m_tVertices) do
 		v.x = v.x + x
 		v.y = v.y + y
 	end
+
+	if (self.m_cInnerCircle) then
+		self.m_cInnerCircle:OffsetVertices(x, y)
+	end
+end
+
+function CIRCLE:Copy()
+	return table.Copy(self)
 end
 
 function CIRCLE:Calculate()
-	local r = self.R
-	local x, y = self.X, self.Y
-	local start, finish = self.StartAngle, self.EndAngle
+	local r = self.m_iR
+	local x, y = self.m_iX, self.m_iY
+	local start, finish = self.m_iStartAngle, self.m_iEndAngle
 
-	local verts, dist = {}, 360 / (2 * math.pi * r / 2)
+	local verts, dist = {}, math.Clamp(self.m_iSteps or math.max(8, 360 / (r * math.pi)), 1, 120)
 
-	if (math.abs(start - finish) ~= 360) then
+	if (finish - start ~= 360) then
 		table.insert(verts, {
 			x = x,
 			y = y,
@@ -111,13 +125,17 @@ function CIRCLE:Calculate()
 			u = 0.5,
 			v = 0.5,
 		})
+
+		finish = finish + dist
+	else
+		finish = finish - dist
 	end
 
-	for a = start, finish + dist, dist do
-		a = math.max(start, math.min(finish, a))
+	for a = start, finish, dist do
+		a = math.Clamp(a, start, self.m_iEndAngle)
 
 		local rad = math.rad(a)
-		local rot = math.rad(self.Rotation)
+		local rot = math.rad(self.m_iRotation)
 
 		table.insert(verts, {
 			x = x + math.cos(rad + rot) * r,
@@ -128,38 +146,27 @@ function CIRCLE:Calculate()
 		})
 	end
 
-	if (self.Type == CIRCLE_OUTLINED and not self.InnerCircle) then
-		local inner = draw.CreateCircle(CIRCLE_FILLED)
-		inner:SetRadius(r - self.Thickness)
-		inner:SetPos(x, y)
-
-		self.InnerCircle = inner
-	end
-
-	self.Vertices = verts
+	self.m_tVertices = verts
 end
 
-function CIRCLE:Outline()
-	if not (self.Vertices) then
+function CIRCLE:Draw(colour, material)
+	if (not self.m_tVertices) then
 		self:Calculate()
 	end
 
-	local prev = self.Vertices[#self.Vertices]
+	if (IsColor(colour)) then surface.SetDrawColor(colour) end
+	if (TypeID(material) == TYPE_MATERIAL) then surface.SetMaterial(material) elseif (material ~= nil) then draw.NoTexture() end
 
-	for i, vert in ipairs(self.Vertices) do
-		surface.DrawLine(prev.x, prev.y, vert.x, vert.y)
-		prev = vert
-	end
-end
+	if (self.m_iType == CIRCLE_OUTLINED) then
+		if (not self.m_cInnerCircle) then
+			local inner = self:Copy()
 
-function CIRCLE:Draw(outline)
-	if not (self.Vertices) then
-		self:Calculate()
-	end
+			inner:SetType(CIRCLE_FILLED)
+			inner:SetRadius(self.m_iR - self.m_iThickness)
 
-	local x, y, r = self.X, self.Y, self.R
+			self.m_cInnerCircle = inner
+		end
 
-	if (self.Type == CIRCLE_OUTLINED) then
 		render.ClearStencil()
 
 		render.SetStencilEnable(true)
@@ -172,15 +179,15 @@ function CIRCLE:Draw(outline)
 			render.SetStencilFailOperation(STENCIL_REPLACE)
 			render.SetStencilZFailOperation(STENCIL_REPLACE)
 
-			self.InnerCircle:Draw()
+			self.m_cInnerCircle()
 
 			render.SetStencilFailOperation(STENCIL_KEEP)
 			render.SetStencilZFailOperation(STENCIL_KEEP)
 			render.SetStencilCompareFunction(STENCIL_GREATER)
 
-			surface.DrawPoly(self.Vertices)
+			surface.DrawPoly(self.m_tVertices)
 		render.SetStencilEnable(false)
-	elseif (self.Type == CIRCLE_BLURRED) then
+	elseif (self.m_iType == CIRCLE_BLURRED) then
 		render.ClearStencil()
 
 		render.SetStencilEnable(true)
@@ -193,7 +200,7 @@ function CIRCLE:Draw(outline)
 			render.SetStencilFailOperation(STENCIL_REPLACE)
 			render.SetStencilZFailOperation(STENCIL_REPLACE)
 
-			surface.DrawPoly(self.Vertices)
+			surface.DrawPoly(self.m_tVertices)
 
 			render.SetStencilFailOperation(STENCIL_KEEP)
 			render.SetStencilZFailOperation(STENCIL_KEEP)
@@ -201,29 +208,24 @@ function CIRCLE:Draw(outline)
 
 			surface.SetMaterial(blur)
 
-			render.SetScissorRect(x - r, y - r, x + r * 2, y + r * 2, true)
-				for i = 1, self.Quality do
-					blur:SetFloat("$blur", (i / self.Quality) * self.Density)
-					blur:Recompute()
+			local sw, sh = ScrW(), ScrH()
 
-					render.UpdateScreenEffectTexture()
-					surface.DrawTexturedRect(0, 0, ScrW(), ScrH())
-				end
-			render.SetScissorRect(0, 0, 0, 0, false)
+			for i = 1, self.m_iQuality do
+				blur:SetFloat("$blur", (i / self.m_iQuality) * self.m_iDensity)
+				blur:Recompute()
+
+				render.UpdateScreenEffectTexture()
+				surface.DrawTexturedRect(0, 0, sw, sh)
+			end
 		render.SetStencilEnable(false)
 	else
-		surface.DrawPoly(self.Vertices)
-	end
-
-	if (outline) then
-		self:Outline()
+		surface.DrawPoly(self.m_tVertices)
 	end
 end
 
 CIRCLE.Render = CIRCLE.Draw
+CIRCLE.__call = CIRCLE.Draw
 
-function draw.CreateCircle(type)
-	return setmetatable({
-		Type = type,
-	}, CIRCLE)
+function draw.NewCircle(type)
+	return setmetatable({m_iType = tonumber(type)}, CIRCLE)
 end
