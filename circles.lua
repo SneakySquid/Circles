@@ -21,6 +21,8 @@ CIRCLE.m_iDensity = 3
 CIRCLE.m_iStartAngle = 0
 CIRCLE.m_iEndAngle = 360
 
+CIRCLE.m_bRotateMat = true
+
 AccessorFunc(CIRCLE, "m_iType", "Type", FORCE_NUMBER)
 AccessorFunc(CIRCLE, "m_iR", "Radius", FORCE_NUMBER)
 AccessorFunc(CIRCLE, "m_iVertices", "Vertices", FORCE_NUMBER)
@@ -28,6 +30,7 @@ AccessorFunc(CIRCLE, "m_iRotation", "Rotation", FORCE_NUMBER)
 AccessorFunc(CIRCLE, "m_iThickness", "Thickness", FORCE_NUMBER)
 AccessorFunc(CIRCLE, "m_iQuality", "Quality", FORCE_NUMBER)
 AccessorFunc(CIRCLE, "m_iDensity", "Density", FORCE_NUMBER)
+AccessorFunc(CIRCLE, "m_bRotateMat", "RotateMaterial", FORCE_BOOL)
 
 function CIRCLE:__tostring()
 	return string.format("Circle: %p", self)
@@ -93,6 +96,9 @@ function CIRCLE:OffsetVertices(x, y)
 		self:Calculate()
 	end
 
+	x = x or 0
+	y = y or 0
+
 	self.m_iX = self.m_iX + x
 	self.m_iY = self.m_iY + y
 
@@ -141,21 +147,21 @@ function CIRCLE:Calculate()
 			x = x + math.cos(rad + rot) * r,
 			y = y + math.sin(rad + rot) * r,
 
-			u = math.cos(rad - rot) / 2 + 0.5,
-			v = math.sin(rad - rot) / 2 + 0.5,
+			u = math.cos(self.m_bRotateMat and rad - rot or rad) / 2 + 0.5,
+			v = math.sin(self.m_bRotateMat and rad - rot or rad) / 2 + 0.5,
 		})
 	end
 
 	self.m_tVertices = verts
 end
 
-function CIRCLE:Draw(colour, material)
+function CIRCLE:__call(colour, material)
 	if (not self.m_tVertices) then
 		self:Calculate()
 	end
 
 	if (IsColor(colour)) then surface.SetDrawColor(colour) end
-	if (TypeID(material) == TYPE_MATERIAL) then surface.SetMaterial(material) elseif (material ~= nil) then draw.NoTexture() end
+	if (TypeID(material) == TYPE_MATERIAL) then surface.SetMaterial(material) elseif (material) then draw.NoTexture() end
 
 	if (self.m_iType == CIRCLE_OUTLINED) then
 		if (not self.m_cInnerCircle) then
@@ -223,8 +229,7 @@ function CIRCLE:Draw(colour, material)
 	end
 end
 
-CIRCLE.Render = CIRCLE.Draw
-CIRCLE.__call = CIRCLE.Draw
+debug.getregistry()["Circle"] = CIRCLE
 
 function draw.NewCircle(type)
 	return setmetatable({m_iType = tonumber(type)}, CIRCLE)
