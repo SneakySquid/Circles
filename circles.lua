@@ -12,17 +12,6 @@ CIRCLE_FILLED = 0
 CIRCLE_OUTLINED = 1
 CIRCLE_BLURRED = 2
 
---[[
-	local function calc_uv(r, x1, y1)
-        _x = r - x1
-        u = 1 - math.abs(_x)/(2*r)
-        if _x < 0 then
-            u = u - 0.5
-        end
-        v = 1 - (r - y1)/(2*r)
-    end
-]]
-
 local function RotateVertices(vertices, ox, oy, rotation, rotate_uv)
 	rotation = rad(rotation)
 
@@ -38,9 +27,7 @@ local function RotateVertices(vertices, ox, oy, rotation, rotate_uv)
 		vertex.x = ox + (vx * c - vy * s)
 		vertex.y = oy + (vx * s + vy * c)
 
-		if (not rotate_uv) then
-			-- yeet is cclockwise
-
+		if (rotate_uv) then
 			local u, v = vertex.u, vertex.v
 
 			vertex.u = u
@@ -49,19 +36,12 @@ local function RotateVertices(vertices, ox, oy, rotation, rotate_uv)
 	end
 end
 
-local function calc_uv(radius, vx, vy)
-	local x = radius - vx
-	local u, v
-
-	u = 1 - math.abs(x) / (2 * radius)
-
-	if (x < 0) then
-		u = u - 0.5
-	end
-
-	v = 1 - (radius - vy) / (2 * radius)
-
-	return u, v
+-- thanks wingiu
+local function calc_radius(a, dist, radius)
+	local ang1 = a % dist
+	local ang2 = (180 - dist) / 2
+	local ang3 = 180 - ang2 - ang1
+	return (sin(rad(ang2)) * radius) / sin(rad(ang3))
 end
 
 local function CalculateStartAngle(vertices, x, y, radius, rotation, start_angle, dist)
@@ -72,21 +52,17 @@ local function CalculateStartAngle(vertices, x, y, radius, rotation, start_angle
 	end
 
 	local a = rad(start_angle + rotation)
-	local ang1 = start_angle % dist
-	local ang2 = (180 - dist) / 2
-	local ang3 = 180 - ang2 - ang1
-	local r = (sin(rad(ang2)) * radius) / sin(rad(ang3))
+	local r = calc_radius(start_angle, dist, radius)
 
 	local vx = cos(a) * r
 	local vy = sin(a) * r
-	local u, v = calc_uv(radius, vx, vy)
 
 	table.insert(vertices, 1, {
 		x = x + vx,
 		y = y + vy,
 
-		u = u,
-		v = v,
+		u = 0.5 + cos(a) / 2,
+		v = 0.5 + sin(a) / 2,
 	})
 end
 
@@ -98,21 +74,17 @@ local function CalculateEndAngle(vertices, x, y, radius, rotation, end_angle, di
 	end
 
 	local a = rad(end_angle + rotation)
-	local ang1 = end_angle % dist
-	local ang2 = (180 - dist) / 2
-	local ang3 = 180 - ang2 - ang1
-	local r = (sin(rad(ang2)) * radius) / sin(rad(ang3))
+	local r = calc_radius(end_angle, dist, radius)
 
 	local vx = cos(a) * r
 	local vy = sin(a) * r
-	local u, v = calc_uv(radius, vx, vy)
 
 	table.insert(vertices, {
 		x = x + vx,
 		y = y + vy,
 
-		u = u,
-		v = v,
+		u = 0.5 + cos(a) / 2,
+		v = 0.5 + sin(a) / 2,
 	})
 end
 
@@ -294,11 +266,29 @@ function CIRCLE:OffsetVertices(x, y)
 		v.y = v.y + y
 	end
 
-	self:SetX(self:GetX() + x)
-	self:SetY(self:GetY() + y)
+	self.m_X = self:GetX() + x
+	self.m_Y = self:GetY() + y
 
 	if (self:GetChildCircle()) then
 		self:GetChildCircle():OffsetVertices(x, y)
+	end
+end
+
+function CIRCLE:Rotate(rotation)
+	if (not self:GetVertices()) then
+		self:CalculateVertices()
+	end
+
+	local vertices = self:GetVertices()
+	local x, y = self:GetPos()
+	local rotate_uv = self:GetRotateMaterial()
+
+	RotateVertices(vertices, x, y, rotation, rotate_uv)
+
+	self.m_Rotation = self.m_Rotation + rotation
+
+	if (self:GetChildCircle()) then
+		self:GetChildCircle():Rotate(rotation)
 	end
 end
 
@@ -374,6 +364,21 @@ do
 		end
 	end
 
+	local function UpdateRotation(circle, old, new)
+		if (circle:GetDirty() or not circle:GetVertices()) then return end
+
+		local vertices = circle:GetVertices()
+		local x, y = circle:GetPos()
+		local rotation = new - old
+		local rotate_uv = circle:GetRotateMaterial()
+
+		RotateVertices(vertices, x, y, rotation, rotate_uv)
+
+		if (circle:GetChildCircle()) then
+			circle:GetChildCircle():Rotate(rotate)
+		end
+	end
+
 	local function UpdateOutlineWidth(circle, old, new)
 		if (circle:GetDirty() or not circle:GetVertices()) then return end
 
@@ -396,7 +401,7 @@ do
 	AccessorFunc("X", 0, nil, OffsetVerticesX)
 	AccessorFunc("Y", 0, nil, OffsetVerticesY)
 	AccessorFunc("Radius", 8, nil, ScaleVertices)
-	AccessorFunc("Rotation", 0, "m_Dirty")
+	AccessorFunc("Rotation", 0, nil, UpdateRotation)
 	AccessorFunc("StartAngle", 0, "m_Dirty")
 	AccessorFunc("EndAngle", 360, "m_Dirty")
 	AccessorFunc("Segments", 45, "m_Dirty")
