@@ -27,11 +27,12 @@ local function RotateVertices(vertices, ox, oy, rotation, rotate_uv)
 		vertex.x = ox + (vx * c - vy * s)
 		vertex.y = oy + (vx * s + vy * c)
 
-		if (rotate_uv) then
+		if (not rotate_uv) then
 			local u, v = vertex.u, vertex.v
+			u, v = u - 0.5, v - 0.5
 
-			vertex.u = u
-			vertex.v = v
+			vertex.u = 0.5 + (u * c - v * s)
+			vertex.v = 0.5 + (u * s + v * c)
 		end
 	end
 end
@@ -57,12 +58,14 @@ local function CalculateStartAngle(vertices, x, y, radius, rotation, start_angle
 	local vx = cos(a) * r
 	local vy = sin(a) * r
 
+	local mult = 0.5 * (r / radius)
+
 	table.insert(vertices, 1, {
 		x = x + vx,
 		y = y + vy,
 
-		u = 0.5 + cos(a) / 2,
-		v = 0.5 + sin(a) / 2,
+		u = 0.5 + cos(a) * mult,
+		v = 0.5 + sin(a) * mult,
 	})
 end
 
@@ -79,12 +82,14 @@ local function CalculateEndAngle(vertices, x, y, radius, rotation, end_angle, di
 	local vx = cos(a) * r
 	local vy = sin(a) * r
 
+	local mult = 0.5 * (r / radius)
+
 	table.insert(vertices, {
 		x = x + vx,
 		y = y + vy,
 
-		u = 0.5 + cos(a) / 2,
-		v = 0.5 + sin(a) / 2,
+		u = 0.5 + cos(a) * mult,
+		v = 0.5 + sin(a) * mult,
 	})
 end
 
@@ -96,23 +101,27 @@ local function CalculateVertices(x, y, radius, rotation, start_angle, end_angle,
 	start_angle = tonumber(start_angle) or 0
 	end_angle = tonumber(end_angle) or 360
 
-	local vertices = {}
+	local vertices, cache = {}, {}
 	local dist = 360 / segments
 
-	for a = 0, 360, dist do
+	for a = 0, 360 - dist, dist do
 		a = rad(a)
 
-		table.insert(vertices, {
+		local vertex = {
 			x = x + cos(a) * radius,
 			y = y + sin(a) * radius,
 
 			u = 0.5 + cos(a) / 2,
 			v = 0.5 + sin(a) / 2,
-		})
+		}
+
+		table.insert(vertices, vertex)
+		table.insert(cache, vertex)
 	end
 
 	if (rotation ~= 0) then
 		RotateVertices(vertices, x, y, rotation, rotate_uv)
+		RotateVertices(cache, x, y, rotation, rotate_uv)
 	end
 
 	if (end_angle - start_angle ~= 360) then
@@ -130,7 +139,7 @@ local function CalculateVertices(x, y, radius, rotation, start_angle, end_angle,
 		})
 	end
 
-	return vertices
+	return vertices, cache
 end
 
 local function Draw(...)
@@ -169,8 +178,12 @@ function CIRCLE:CalculateVertices()
 	local segments = self:GetSegments()
 	local rotate_uv = self:GetRotateMaterial()
 
+	local vertices, cache = CalculateVertices(x, y, radius, rotation, start_angle, end_angle, segments, rotate_uv)
+
+	self:SetVertices(vertices)
+	self:SetCache(cache)
+
 	self:SetDirty(false)
-	self:SetVertices(CalculateVertices(x, y, radius, rotation, start_angle, end_angle, segments, rotate_uv))
 end
 
 function CIRCLE:__call(update)
@@ -379,11 +392,61 @@ do
 		end
 	end
 
+	local function UpdateStartAngle(circle, old, new)
+		if (circle:GetDirty() or not circle:GetVertices()) then return end
+
+		local cache = circle:GetCache()
+		if (not cache) then return end
+
+		local x, y = circle:GetPos()
+		local radius = circle:GetRadius()
+		local rotation = circle:GetRotation()
+		local dist = 360 / circle:GetSegments()
+
+		local vertices = table.Copy(cache)
+
+		if (new ~= 0) then
+			CalculateStartAngle(vertices, x, y, radius, rotation, new, dist)
+
+			table.insert(vertices, 1, {
+				x = x, y = y,
+				u = 0.5, v = 0.5,
+			})
+		end
+
+		circle:SetVertices(vertices)
+	end
+
+	local function UpdateEndAngle(circle, old, new)
+		if (circle:GetDirty() or not circle:GetVertices()) then return end
+
+		local cache = circle:GetCache()
+		if (not cache) then return end
+
+		local x, y = circle:GetPos()
+		local radius = circle:GetRadius()
+		local rotation = circle:GetRotation()
+		local dist = 360 / circle:GetSegments()
+
+		local vertices = table.Copy(cache)
+
+		if (new ~= 360) then
+			CalculateEndAngle(vertices, x, y, radius, rotation, new, dist)
+
+			table.insert(vertices, 1, {
+				x = x, y = y,
+				u = 0.5, v = 0.5,
+			})
+		end
+
+		circle:SetVertices(vertices)
+	end
+
 	local function UpdateOutlineWidth(circle, old, new)
 		if (circle:GetDirty() or not circle:GetVertices()) then return end
 
 		local inner = circle:GetChildCircle()
-		if (inner) then return end
+		if (not inner) then return end
 
 		ScaleVertices(inner, inner:GetRadius(), circle:GetRadius() - new)
 	end
@@ -395,6 +458,7 @@ do
 	AccessorFunc("RotateMaterial", true)
 
 	AccessorFunc("Vertices", false)
+	AccessorFunc("Cache", false)
 	AccessorFunc("ChildCircle", false)
 
 	AccessorFunc("Type", CIRCLE_FILLED, "m_Dirty")
@@ -402,8 +466,8 @@ do
 	AccessorFunc("Y", 0, nil, OffsetVerticesY)
 	AccessorFunc("Radius", 8, nil, ScaleVertices)
 	AccessorFunc("Rotation", 0, nil, UpdateRotation)
-	AccessorFunc("StartAngle", 0, "m_Dirty")
-	AccessorFunc("EndAngle", 360, "m_Dirty")
+	AccessorFunc("StartAngle", 0, "m_Dirty") -- nil, UpdateStartAngle)
+	AccessorFunc("EndAngle", 360, "m_Dirty") -- nil, UpdateEndAngle)
 	AccessorFunc("Segments", 45, "m_Dirty")
 
 	AccessorFunc("BlurDensity", 3)
