@@ -80,15 +80,15 @@ local function CalculateVertices(x, y, radius, rotation, start_angle, end_angle,
 	step = tonumber(step) or 8
 
 	local vertices = {}
+	local dist = rad(step)
 
 	for a = 0, end_angle + step, step do
 		if (a <= start_angle - step) then goto CONTINUE end
 
 		a = max(start_angle, min(end_angle, a))
-
-		local r = calc_radius(a, step, radius)
-
 		a = rad(a)
+
+		local r = calc_radius(a, dist, radius)
 
 		local c = cos(a)
 		local s = sin(a)
