@@ -61,41 +61,28 @@ local function RotateVertices(vertices, ox, oy, rotation, rotate_uv)
 	end
 end
 
--- thanks wingiu
-local function calc_radius(a, dist, radius)
-	local ang1 = a % dist
-	local ang2 = 0.5 * (math.pi - dist)
-	local ang3 = math.pi - ang2 - ang1
-
-	return sin(ang2) * radius / sin(ang3)
-end
-
-local function CalculateVertices(x, y, radius, rotation, start_angle, end_angle, step, rotate_uv)
+local function CalculateVertices(x, y, radius, rotation, start_angle, end_angle, distance, rotate_uv)
 	x = tonumber(x) or 0
 	y = tonumber(y) or 0
 	radius = tonumber(radius) or 16
 	rotation = tonumber(rotation) or 0
 	start_angle = tonumber(start_angle) or 0
 	end_angle = tonumber(end_angle) or 360
-	step = tonumber(step) or 8
+	distance = tonumber(distance) or 10
 
 	local vertices = {}
-	local dist = rad(step)
+	local step = (distance * 360) / (2 * math.pi * radius)
 
-	for a = 0, end_angle + step, step do
-		if (a <= start_angle - step) then goto CONTINUE end
-
+	for a = start_angle, end_angle + step, step do
 		a = max(start_angle, min(end_angle, a))
 		a = rad(a)
-
-		local r = calc_radius(a, dist, radius)
 
 		local c = cos(a)
 		local s = sin(a)
 
 		local vertex = {
-			x = x + c * r,
-			y = y + s * r,
+			x = x + c * radius,
+			y = y + s * radius,
 
 			u = 0.5 + c / 2,
 			v = 0.5 + s / 2,
@@ -138,24 +125,16 @@ function CIRCLE:Calculate()
 	local start_angle = self:GetStartAngle()
 	local end_angle = self:GetEndAngle()
 	local distance = self:GetDistance()
-	local segments = self:GetSegments()
 
-	local step
-
-	if (distance and distance > 0) then
-		step = (distance * 360) / (2 * math.pi * radius)
-	else
-		step = 360 / max(segments, 3)
-	end
-
-	self:SetVertices(CalculateVertices(x, y, radius, rotation, start_angle, end_angle, step, rotate_uv))
+	self:SetVertices(CalculateVertices(x, y, radius, rotation, start_angle, end_angle, distance, rotate_uv))
 
 	if (self:GetType() == CIRCLE_OUTLINED) then
-		local inner = self:Copy()
+		local inner = self:GetChildCircle() or self:Copy()
 
 		inner:SetType(CIRCLE_FILLED)
 		inner:SetRadius(self:GetRadius() - self:GetOutlineWidth())
 		inner:SetDisableClipping(false)
+		inner:SetColour(false)
 
 		self:SetChildCircle(inner)
 	end
@@ -178,20 +157,17 @@ function CIRCLE:__call()
 		render.ClearStencil()
 
 		render.SetStencilEnable(true)
-			render.SetStencilReferenceValue(1)
-			render.SetStencilWriteMask(1)
-			render.SetStencilTestMask(1)
+			render.SetStencilTestMask(0xFF)
+			render.SetStencilWriteMask(0xFF)
+			render.SetStencilReferenceValue(0x01)
 
-			render.SetStencilPassOperation(STENCIL_KEEP)
 			render.SetStencilCompareFunction(STENCIL_NEVER)
 			render.SetStencilFailOperation(STENCIL_REPLACE)
-			render.SetStencilZFailOperation(STENCIL_REPLACE)
 
 			self:GetChildCircle()()
 
-			render.SetStencilFailOperation(STENCIL_KEEP)
-			render.SetStencilZFailOperation(STENCIL_KEEP)
 			render.SetStencilCompareFunction(STENCIL_GREATER)
+			render.SetStencilPassOperation(STENCIL_REPLACE)
 
 			surface.DrawPoly(self:GetVertices())
 		render.SetStencilEnable(false)
@@ -199,19 +175,15 @@ function CIRCLE:__call()
 		render.ClearStencil()
 
 		render.SetStencilEnable(true)
-			render.SetStencilReferenceValue(1)
-			render.SetStencilWriteMask(1)
-			render.SetStencilTestMask(1)
+			render.SetStencilTestMask(0xFF)
+			render.SetStencilWriteMask(0xFF)
+			render.SetStencilReferenceValue(0x01)
 
-			render.SetStencilPassOperation(STENCIL_KEEP)
 			render.SetStencilCompareFunction(STENCIL_NEVER)
 			render.SetStencilFailOperation(STENCIL_REPLACE)
-			render.SetStencilZFailOperation(STENCIL_REPLACE)
 
 			surface.DrawPoly(self:GetVertices())
 
-			render.SetStencilFailOperation(STENCIL_KEEP)
-			render.SetStencilZFailOperation(STENCIL_KEEP)
 			render.SetStencilCompareFunction(STENCIL_LESSEQUAL)
 
 			surface.SetMaterial(BlurMat)
@@ -223,7 +195,6 @@ function CIRCLE:__call()
 				BlurMat:Recompute()
 
 				render.UpdateScreenEffectTexture()
-
 				surface.DrawTexturedRect(0, 0, sw, sh)
 			end
 		render.SetStencilEnable(false)
@@ -234,7 +205,7 @@ function CIRCLE:__call()
 	if (clip) then surface.DisableClipping(false) end
 end
 
-function CIRCLE:Offset(x, y)
+function CIRCLE:Translate(x, y)
 	self.m_X = self:GetX() + x
 	self.m_Y = self:GetY() + y
 
@@ -249,7 +220,7 @@ function CIRCLE:Offset(x, y)
 	end
 
 	if (self:GetType() == CIRCLE_OUTLINED) then
-		self:GetChildCircle():Offset(x, y)
+		self:GetChildCircle():Translate(x, y)
 	end
 end
 
@@ -359,24 +330,23 @@ do
 	AccessorFunc("Vertices", false)
 	AccessorFunc("ChildCircle", false)
 
-	AccessorFunc("Colour", false) -- The colour you want the circle to be. If set to false then surface.SetDrawColor's can be used.
-	AccessorFunc("Material", false) -- The material you want the circle to render. If set to false then surface.SetMaterial can be used.
-	AccessorFunc("RotateMaterial", true) -- Sets whether or not the circle's UV points should be rotated with the vertices.
-	AccessorFunc("DisableClipping", false) -- Sets whether or not to disable clipping when the circle is rendered. Useful for circles that go out of the render bounds.
+	AccessorFunc("Colour", false)						-- The colour you want the circle to be. If set to false then surface.SetDrawColor's can be used.
+	AccessorFunc("Material", false)						-- The material you want the circle to render. If set to false then surface.SetMaterial can be used.
+	AccessorFunc("RotateMaterial", true)				-- Sets whether or not the circle's UV points should be rotated with the vertices.
+	AccessorFunc("DisableClipping", false)				-- Sets whether or not to disable clipping when the circle is rendered. Useful for circles that go out of the render bounds.
 
-	AccessorFunc("Type", CIRCLE_FILLED, "m_Dirty") -- The circle's type.
-	AccessorFunc("X", 0, false, OffsetVerticesX) -- The circle's X position relative to the top left of the screen.
-	AccessorFunc("Y", 0, false, OffsetVerticesY) -- The circle's Y position relative to the top left of the screen.
-	AccessorFunc("Radius", 8, "m_Dirty") -- The circle's radius.
-	AccessorFunc("Rotation", 0, false, UpdateRotation) -- The circle's rotation, measured in degrees.
-	AccessorFunc("StartAngle", 0, "m_Dirty") -- The circle's start angle, measured in degrees.
-	AccessorFunc("EndAngle", 360, "m_Dirty") -- The circle's end angle, measured in degrees.
-	AccessorFunc("Distance", 10, "m_Dirty") -- The maximum distance between each of the circle's vertices. Set to false to use segments instead. This should typically be used for large circles in 3D2D.
-	AccessorFunc("Segments", 45, "m_Dirty") -- The amount of segments that will be calculated if Distance is set to false. If you're setting this higher than 360 then you should be using Distance instead.
+	AccessorFunc("Type", CIRCLE_FILLED, "m_Dirty") 		-- The circle's type.
+	AccessorFunc("X", 0, false, OffsetVerticesX) 		-- The circle's X position relative to the top left of the screen.
+	AccessorFunc("Y", 0, false, OffsetVerticesY) 		-- The circle's Y position relative to the top left of the screen.
+	AccessorFunc("Radius", 8, "m_Dirty") 				-- The circle's radius.
+	AccessorFunc("Rotation", 0, false, UpdateRotation)	-- The circle's rotation, measured in degrees.
+	AccessorFunc("StartAngle", 0, "m_Dirty") 			-- The circle's start angle, measured in degrees.
+	AccessorFunc("EndAngle", 360, "m_Dirty")			-- The circle's end angle, measured in degrees.
+	AccessorFunc("Distance", 10, "m_Dirty")				-- The maximum distance between each of the circle's vertices. Set to false to use segments instead. This should typically be used for large circles in 3D2D.
 
-	AccessorFunc("BlurDensity", 3) -- The circle's blur density if Type is set to CIRCLE_BLURRED.
-	AccessorFunc("BlurQuality", 2) -- The circle's blur quality if Type is set to CIRCLE_BLURRED.
-	AccessorFunc("OutlineWidth", 10, "m_Dirty") -- The circle's outline width if Type is set to CIRCLE_OUTLINED.
+	AccessorFunc("BlurDensity", 3)						-- The circle's blur density if Type is set to CIRCLE_BLURRED.
+	AccessorFunc("BlurQuality", 2)						-- The circle's blur quality if Type is set to CIRCLE_BLURRED.
+	AccessorFunc("OutlineWidth", 10, "m_Dirty")			-- The circle's outline width if Type is set to CIRCLE_OUTLINED.
 
 	function CIRCLE:SetPos(x, y)
 		self:SetX(x)
