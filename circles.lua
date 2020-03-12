@@ -133,8 +133,10 @@ function CIRCLE:Calculate()
 
 		inner:SetType(CIRCLE_FILLED)
 		inner:SetRadius(self:GetRadius() - self:GetOutlineWidth())
-		inner:SetDisableClipping(false)
+
 		inner:SetColour(false)
+		inner:SetMaterial(false)
+		inner:SetDisableClipping(false)
 
 		self:SetChildCircle(inner)
 	end
