@@ -1,4 +1,5 @@
 # Circles!
+[Go to **Examples**](#examples)
 
 ## Functions:
 
