@@ -1,5 +1,6 @@
 # Circles!
-[Go to **Examples**](#examples)
+[Go to Examples](#examples)\
+[Go to Methods](#methods)
 
 ## Functions:
 
