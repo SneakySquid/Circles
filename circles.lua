@@ -27,9 +27,9 @@ local function New(type, radius, x, y, ...)
 		local outline_width = ({...})[1]
 		circle:SetOutlineWidth(tonumber(outline_width))
 	elseif (type == CIRCLE_BLURRED) then
-		local blur_quality, blur_density = unpack({...})
-		circle:SetBlurQuality(tonumber(blur_quality))
+		local blur_density, blur_quality = unpack({...})
 		circle:SetBlurDensity(tonumber(blur_density))
+		circle:SetBlurQuality(tonumber(blur_quality))
 	end
 
 	return circle
@@ -70,6 +70,12 @@ local function CalculateVertices(x, y, radius, rotation, start_angle, end_angle,
 	end_angle = tonumber(end_angle) or 360
 	distance = tonumber(distance) or 10
 
+	if (start_angle > end_angle) then
+		local tmp = start_angle
+		start_angle = end_angle
+		end_angle = tmp
+	end
+
 	local vertices = {}
 	local step = (distance * 360) / (2 * math.pi * radius)
 
@@ -89,8 +95,6 @@ local function CalculateVertices(x, y, radius, rotation, start_angle, end_angle,
 		}
 
 		table.insert(vertices, vertex)
-
-		::CONTINUE::
 	end
 
 	if (end_angle - start_angle ~= 360) then
@@ -133,8 +137,9 @@ function CIRCLE:Calculate()
 
 		inner:SetType(CIRCLE_FILLED)
 		inner:SetRadius(self:GetRadius() - self:GetOutlineWidth())
+		inner:SetAngles(0, 360)
 
-		inner:SetColour(false)
+		inner:SetColor(false)
 		inner:SetMaterial(false)
 		inner:SetDisableClipping(false)
 
@@ -149,7 +154,7 @@ function CIRCLE:__call()
 		self:Calculate()
 	end
 
-	if (IsColor(self:GetColour())) then surface.SetDrawColor(self:GetColour()) end
+	if (IsColor(self:GetColor())) then surface.SetDrawColor(self:GetColor()) end
 	if (TypeID(self:GetMaterial()) == TYPE_MATERIAL) then surface.SetMaterial(self:GetMaterial()) end
 
 	local clip = self:GetDisableClipping()
@@ -165,11 +170,13 @@ function CIRCLE:__call()
 
 			render.SetStencilCompareFunction(STENCIL_NEVER)
 			render.SetStencilFailOperation(STENCIL_REPLACE)
+			render.SetStencilZFailOperation(STENCIL_REPLACE)
 
 			self:GetChildCircle()()
 
 			render.SetStencilCompareFunction(STENCIL_GREATER)
-			render.SetStencilPassOperation(STENCIL_REPLACE)
+			render.SetStencilFailOperation(STENCIL_KEEP)
+			render.SetStencilZFailOperation(STENCIL_KEEP)
 
 			surface.DrawPoly(self:GetVertices())
 		render.SetStencilEnable(false)
@@ -183,10 +190,13 @@ function CIRCLE:__call()
 
 			render.SetStencilCompareFunction(STENCIL_NEVER)
 			render.SetStencilFailOperation(STENCIL_REPLACE)
+			render.SetStencilZFailOperation(STENCIL_REPLACE)
 
 			surface.DrawPoly(self:GetVertices())
 
 			render.SetStencilCompareFunction(STENCIL_LESSEQUAL)
+			render.SetStencilFailOperation(STENCIL_KEEP)
+			render.SetStencilZFailOperation(STENCIL_KEEP)
 
 			surface.SetMaterial(BlurMat)
 
@@ -232,6 +242,7 @@ function CIRCLE:Scale(scale)
 	if (self:GetDirty()) then return end
 
 	local x, y = self:GetPos()
+	scale = tonumber(scale) or 1
 
 	for i, vertex in ipairs(self:GetVertices()) do
 		vertex.x = x + ((vertex.x - x) * scale)
@@ -251,6 +262,7 @@ function CIRCLE:Rotate(degrees)
 	local vertices = self:GetVertices()
 	local x, y = self:GetPos()
 	local rotate_uv = self:GetRotateMaterial()
+	degrees = tonumber(degrees) or 0
 
 	RotateVertices(vertices, x, y, degrees, rotate_uv)
 
@@ -332,7 +344,7 @@ do
 	AccessorFunc("Vertices", false)
 	AccessorFunc("ChildCircle", false)
 
-	AccessorFunc("Colour", false)						-- The colour you want the circle to be. If set to false then surface.SetDrawColor's can be used.
+	AccessorFunc("Color", false)						-- The colour you want the circle to be. If set to false then surface.SetDrawColor's can be used.
 	AccessorFunc("Material", false)						-- The material you want the circle to render. If set to false then surface.SetMaterial can be used.
 	AccessorFunc("RotateMaterial", true)				-- Sets whether or not the circle's UV points should be rotated with the vertices.
 	AccessorFunc("DisableClipping", false)				-- Sets whether or not to disable clipping when the circle is rendered. Useful for circles that go out of the render bounds.
