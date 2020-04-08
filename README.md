@@ -73,6 +73,7 @@
 
 
 ## Methods:
+[Examples](#examples)\
 Methods marked with an asterisk (*) are accessors meaning they have Set and Get equivalents.
 
 ### *Color(table color)
@@ -310,7 +311,7 @@ local function Example4()
 	-- health_color.g = 255 * percent
 
 	-- The 90 here is how many degrees the quarter circle is.
-	--If you wanted to use a full circle for the health meter you'd replace it with 360.
+	-- If you wanted to use a full circle for the health meter you'd replace it with 360.
 	local end_angle = 90 * percent
 
 	-- Make the partial circle smaller depending on health.
