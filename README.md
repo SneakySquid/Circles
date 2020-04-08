@@ -7,7 +7,7 @@
 #### New(number type, number radius, number x, number y, number outline_width | number blur_density, blur_quality)
 ###### Arguments:
 1. number **type** = `CIRCLE_FILLED`
-	- The type of circle to make. Valid option are CIRCLE_FILLED, CIRCLE_OUTLINED, and CIRCLE_BLURRED.
+	- The type of circle to make. Valid options are CIRCLE_FILLED, CIRCLE_OUTLINED, and CIRCLE_BLURRED.
 2. number **radius** = `8`
 	- The radius of the circle.
 3. number **x** = `0`
