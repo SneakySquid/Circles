@@ -1,14 +1,16 @@
 local _R = debug.getregistry()
-if (false and _R.Circles) then return _R.Circles end
+if (_R.Circles) then return _R.Circles end
 
 local BlurMat = Material("pp/blurscreen")
 
 local CIRCLE = {}
 CIRCLE.__index = CIRCLE
 
-CIRCLE_FILLED = 0
-CIRCLE_OUTLINED = 1
-CIRCLE_BLURRED = 2
+do
+	CIRCLE_FILLED = 0
+	CIRCLE_OUTLINED = 1
+	CIRCLE_BLURRED = 2
+end
 
 local err = "bad argument #%i to '%s' (%s expected, got %s)"
 local function assert(cond, arg, name, expected, got)
@@ -17,22 +19,22 @@ local function assert(cond, arg, name, expected, got)
 	end
 end
 
-local function New(type, x, y, radius, ...)
-	assert(isnumber(type), 1, "New", "number", type)
+local function New(typ, x, y, radius, ...)
+	assert(isnumber(typ), 1, "New", "number", typ)
 	assert(isnumber(x), 2, "New", "number", x)
 	assert(isnumber(y), 3, "New", "number", y)
 	assert(isnumber(radius), 4, "New", "number", radius)
 
 	local circle = setmetatable({}, CIRCLE)
 
-	circle:SetType(tonumber(type))
+	circle:SetType(tonumber(typ))
 	circle:SetRadius(tonumber(radius))
 	circle:SetPos(tonumber(x), tonumber(y))
 
-	if (type == CIRCLE_OUTLINED) then
+	if (typ == CIRCLE_OUTLINED) then
 		local outline_width = ({...})[1]
 		circle:SetOutlineWidth(tonumber(outline_width))
-	elseif (type == CIRCLE_BLURRED) then
+	elseif (typ == CIRCLE_BLURRED) then
 		local blur_layers, blur_density = unpack({...})
 		circle:SetBlurLayers(tonumber(blur_layers))
 		circle:SetBlurDensity(tonumber(blur_density))
