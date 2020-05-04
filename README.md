@@ -1,5 +1,5 @@
 # Circles!
-[Methods](#methods)\
+[Methods](#methods)
 
 ## Functions:
 
