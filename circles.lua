@@ -13,22 +13,22 @@ do
 end
 
 local err = "bad argument #%i to '%s' (%s expected, got %s)"
-local function assert(cond, arg, name, expected, got)
+local function TypeCheck(cond, arg, name, expected, got)
 	if (not cond) then
 		error(string.format(err, arg, name, expected, type(got)), 3)
 	end
 end
 
-local function New(typ, x, y, radius, ...)
-	assert(isnumber(typ), 1, "New", "number", typ)
-	assert(isnumber(x), 2, "New", "number", x)
-	assert(isnumber(y), 3, "New", "number", y)
-	assert(isnumber(radius), 4, "New", "number", radius)
+local function New(typ, r, x, y, ...)
+	TypeCheck(isnumber(typ), 1, "New", "number", typ)
+	TypeCheck(isnumber(r), 2, "New", "number", r)
+	TypeCheck(isnumber(x), 3, "New", "number", x)
+	TypeCheck(isnumber(y), 4, "New", "number", y)
 
 	local circle = setmetatable({}, CIRCLE)
 
 	circle:SetType(tonumber(typ))
-	circle:SetRadius(tonumber(radius))
+	circle:SetRadius(tonumber(r))
 	circle:SetPos(tonumber(x), tonumber(y))
 
 	if (typ == CIRCLE_OUTLINED) then
@@ -44,10 +44,10 @@ local function New(typ, x, y, radius, ...)
 end
 
 local function RotateVertices(vertices, ox, oy, rotation, rotate_uv)
-	assert(istable(vertices), 1, "RotateVertices", "table", vertices)
-	assert(isnumber(ox), 2, "RotateVertices", "number", ox)
-	assert(isnumber(oy), 3, "RotateVertices", "number", oy)
-	assert(isnumber(rotation), 4, "RotateVertices", "number", rotation)
+	TypeCheck(istable(vertices), 1, "RotateVertices", "table", vertices)
+	TypeCheck(isnumber(ox), 2, "RotateVertices", "number", ox)
+	TypeCheck(isnumber(oy), 3, "RotateVertices", "number", oy)
+	TypeCheck(isnumber(rotation), 4, "RotateVertices", "number", rotation)
 
 	rotation = math.rad(rotation)
 
@@ -75,13 +75,13 @@ local function RotateVertices(vertices, ox, oy, rotation, rotate_uv)
 end
 
 local function CalculateVertices(x, y, radius, rotation, start_angle, end_angle, distance, rotate_uv)
-	assert(isnumber(x), 1, "CalculateVertices", "number", x)
-	assert(isnumber(y), 2, "CalculateVertices", "number", y)
-	assert(isnumber(radius), 3, "CalculateVertices", "number", radius)
-	assert(isnumber(rotation), 4, "CalculateVertices", "number", rotation)
-	assert(isnumber(start_angle), 5, "CalculateVertices", "number", start_angle)
-	assert(isnumber(end_angle), 6, "CalculateVertices", "number", end_angle)
-	assert(isnumber(distance), 7, "CalculateVertices", "number", distance)
+	TypeCheck(isnumber(x), 1, "CalculateVertices", "number", x)
+	TypeCheck(isnumber(y), 2, "CalculateVertices", "number", y)
+	TypeCheck(isnumber(radius), 3, "CalculateVertices", "number", radius)
+	TypeCheck(isnumber(rotation), 4, "CalculateVertices", "number", rotation)
+	TypeCheck(isnumber(start_angle), 5, "CalculateVertices", "number", start_angle)
+	TypeCheck(isnumber(end_angle), 6, "CalculateVertices", "number", end_angle)
+	TypeCheck(isnumber(distance), 7, "CalculateVertices", "number", distance)
 
 	local vertices = {}
 	local step = (distance * 360) / (2 * math.pi * radius)
@@ -137,13 +137,8 @@ function CIRCLE:Calculate()
 	local end_angle = self:GetEndAngle()
 	local distance = self:GetDistance()
 
-	if (radius <= 0) then
-		error(string.format("Circle radius should be higher than 0. (%.2f)", radius), 3)
-	elseif (end_angle - start_angle <= 0) then
-		error(string.format("Circle angles should be higher than 0. (%.2f)", end_angle - start_angle), 3)
-	elseif (distance <= 0) then
-		error(string.format("Circle vertice distance should be higher than 0. (%.2f)", distance), 3)
-	end
+	assert(radius > 0, string.format("Circle radius should be higher than 0. (%.2f)", radius))
+	assert(distance > 0, string.format("Circle vertice distance should be higher than 0. (%.2f)", distance))
 
 	self:SetVertices(CalculateVertices(x, y, radius, rotation, start_angle, end_angle, distance, rotate_uv))
 
