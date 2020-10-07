@@ -1,4 +1,5 @@
 -- Be sure to include the file manually. Running it by itself won't do anything.
+-- If you want to use it clientside you'll also have to AddCSLuaFile it yourself.
 -- Don't worry about doing this in multiple files since the created table gets cached.
 local circles = include("circles.lua")
 
