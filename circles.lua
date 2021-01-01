@@ -384,7 +384,8 @@ do
 				end
 
 				if isfunction(callback) then
-					value = callback(self, self[varname], value) or value
+					local new = callback(self, self[varname], value)
+					value = new ~= nil and new or value
 				end
 
 				self[varname] = value
