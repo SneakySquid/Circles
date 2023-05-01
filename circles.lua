@@ -177,12 +177,12 @@ function CIRCLE:Calculate()
 		local inner = self.m_ChildCircle or self:Copy()
 		local inner_r = radius - self.m_OutlineWidth
 
+		inner:SetType(CIRCLE_FILLED)
+
 		if inner_r >= radius then
 			self:SetShouldRender(false)
 		else
 			if inner_r >= 1 then
-				inner:SetType(CIRCLE_FILLED)
-
 				inner:SetRadius(inner_r)
 				inner:SetAngles(start_angle, end_angle)
 
