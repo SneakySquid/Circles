@@ -177,25 +177,16 @@ function CIRCLE:Calculate()
 		local inner = self.m_ChildCircle or self:Copy()
 		local inner_r = radius - self.m_OutlineWidth
 
-		if inner_r >= radius then
-			self:SetShouldRender(false)
-		else
-			if inner_r >= 1 then
-				inner:SetType(CIRCLE_FILLED)
+		inner:SetType(CIRCLE_FILLED)
 
-				inner:SetRadius(inner_r)
-				inner:SetAngles(start_angle, end_angle)
+		inner:SetRadius(inner_r)
+		inner:SetAngles(start_angle, end_angle)
 
-				inner:SetColor(false)
-				inner:SetMaterial(false)
+		inner:SetColor(false)
+		inner:SetMaterial(false)
 
-				inner:SetShouldRender(true)
-			else
-				inner:SetShouldRender(false)
-			end
-
-			self:SetShouldRender(true)
-		end
+		inner:SetShouldRender(inner_r >= 1)
+		self:SetShouldRender(inner_r < radius)
 
 		self:SetChildCircle(inner)
 	elseif self.m_ChildCircle then
@@ -209,13 +200,10 @@ do
 	local blur = Material("pp/blurscreen")
 
 	function CIRCLE:__call()
-		if self.m_Dirty then
-			self:Calculate()
-		end
+		if self.m_Dirty then self:Calculate() end
 
-		if not self.m_ShouldRender or not self:IsValid() then
-			return false
-		end
+		if not self:IsValid() then return false end
+		if not self.m_ShouldRender then return false end
 
 		do
 			local col, mat = self.m_Color, self.m_Material
@@ -442,22 +430,22 @@ do
 	AccessorFunc("ChildCircle", false)
 	AccessorFunc("ShouldRender", true)
 
-	AccessorFunc("Color", false)				-- The colour you want the circle to be. If set to false then surface.SetDrawColor's can be used.
-	AccessorFunc("Material", false)				-- The material you want the circle to render. If set to false then surface.SetMaterial can be used.
-	AccessorFunc("RotateMaterial", true)			-- Sets whether or not the circle's UV points should be rotated with the vertices.
+	AccessorFunc("Color", false)						-- The colour you want the circle to be. If set to false then surface.SetDrawColor's can be used.
+	AccessorFunc("Material", false)						-- The material you want the circle to render. If set to false then surface.SetMaterial can be used.
+	AccessorFunc("RotateMaterial", true)				-- Sets whether or not the circle's UV points should be rotated with the vertices.
 
 	AccessorFunc("Type", CIRCLE_FILLED, "m_Dirty")		-- The circle's type.
 	AccessorFunc("X", 0, false, OffsetVerticesX)		-- The circle's X position relative to the top left of the screen.
 	AccessorFunc("Y", 0, false, OffsetVerticesY)		-- The circle's Y position relative to the top left of the screen.
-	AccessorFunc("Radius", 8, "m_Dirty")			-- The circle's radius.
+	AccessorFunc("Radius", 8, "m_Dirty")				-- The circle's radius.
 	AccessorFunc("Rotation", 0, false, UpdateRotation)	-- The circle's rotation, measured in degrees.
-	AccessorFunc("StartAngle", 0, "m_Dirty")		-- The circle's start angle, measured in degrees.
-	AccessorFunc("EndAngle", 360, "m_Dirty")		-- The circle's end angle, measured in degrees.
-	AccessorFunc("Distance", 10, "m_Dirty")			-- The maximum distance between each of the circle's vertices. Set to false to use segments instead. This should typically be used for large circles in 3D2D.
+	AccessorFunc("StartAngle", 0, "m_Dirty")			-- The circle's start angle, measured in degrees.
+	AccessorFunc("EndAngle", 360, "m_Dirty")			-- The circle's end angle, measured in degrees.
+	AccessorFunc("Distance", 10, "m_Dirty")				-- The maximum distance between each of the circle's vertices. This should typically be used for large circles in 3D2D.
 
-	AccessorFunc("BlurLayers", 3)				-- The circle's blur layers if Type is set to CIRCLE_BLURRED.
-	AccessorFunc("BlurDensity", 2)				-- The circle's blur density if Type is set to CIRCLE_BLURRED.
-	AccessorFunc("OutlineWidth", 10, "m_Dirty")		-- The circle's outline width if Type is set to CIRCLE_OUTLINED.
+	AccessorFunc("BlurLayers", 3)						-- The circle's blur layers if Type is set to CIRCLE_BLURRED.
+	AccessorFunc("BlurDensity", 2)						-- The circle's blur density if Type is set to CIRCLE_BLURRED.
+	AccessorFunc("OutlineWidth", 10, "m_Dirty")			-- The circle's outline width if Type is set to CIRCLE_OUTLINED.
 
 	function CIRCLE:SetPos(x, y)
 		x = tonumber(x) or 0
