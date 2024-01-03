@@ -186,8 +186,9 @@ function CIRCLE:Calculate()
 		inner:SetMaterial(false)
 
 		inner:SetShouldRender(inner_r >= 1)
-		self:SetShouldRender(inner_r < radius)
+		inner:SetDirty(inner.m_ShouldRender)
 
+		self:SetShouldRender(inner_r < radius)
 		self:SetChildCircle(inner)
 	elseif self.m_ChildCircle then
 		self.m_ChildCircle = nil
