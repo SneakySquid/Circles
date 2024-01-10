@@ -1,7 +1,5 @@
 if SERVER then return false end
-
-local _R = debug.getregistry()
-if _R.Circles then return _R.Circles end
+if Circles then return Circles end
 
 local CIRCLE = {}
 CIRCLE.__index = CIRCLE
@@ -474,12 +472,11 @@ do
 	end
 end
 
-_R.Circles = {
+Circles = {
 	_MT = CIRCLE,
-
 	New = New,
 	RotateVertices = RotateVertices,
 	CalculateVertices = CalculateVertices,
 }
 
-return _R.Circles
+return Circles
