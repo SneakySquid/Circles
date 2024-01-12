@@ -179,8 +179,11 @@ function CIRCLE:Calculate()
 
 		inner:SetType(CIRCLE_FILLED)
 
+		inner:SetPos(x, y)
 		inner:SetRadius(inner_r)
+		inner:SetRotation(rotation)
 		inner:SetAngles(start_angle, end_angle)
+		inner:SetDistance(distance)
 
 		inner:SetColor(false)
 		inner:SetMaterial(false)
@@ -195,6 +198,8 @@ function CIRCLE:Calculate()
 	end
 
 	self:SetDirty(false)
+
+	return self
 end
 
 do
@@ -277,6 +282,8 @@ do
 
 		return true
 	end
+
+	CIRCLE.Draw = CIRCLE.__call
 end
 
 do
@@ -285,23 +292,26 @@ do
 	function CIRCLE:Translate(x, y)
 		assert(isnumber(x), string.format(err_number, 1, type(x)))
 		assert(isnumber(y), string.format(err_number, 2, type(y)))
-		if x == 0 and y == 0 then return end
 
-		self.m_X = self.m_X + x
-		self.m_Y = self.m_Y + y
+		if x ~= 0 or y ~= 0 then
+			self.m_X = self.m_X + x
+			self.m_Y = self.m_Y + y
 
-		if not self:IsValid() then return end
+			if self:IsValid() then
+				for i = 1, self.m_Vertices.Count do
+					local vertex = self.m_Vertices[i]
 
-		for i = 1, self.m_Vertices.Count do
-			local vertex = self.m_Vertices[i]
+					vertex.x = vertex.x + x
+					vertex.y = vertex.y + y
+				end
 
-			vertex.x = vertex.x + x
-			vertex.y = vertex.y + y
+				if self.m_Type == CIRCLE_OUTLINED and self.m_ChildCircle then
+					self.m_ChildCircle:Translate(x, y)
+				end
+			end
 		end
 
-		if self.m_Type == CIRCLE_OUTLINED and self.m_ChildCircle then
-			self.m_ChildCircle:Translate(x, y)
-		end
+		return self
 	end
 end
 
@@ -310,24 +320,27 @@ do
 
 	function CIRCLE:Scale(scale)
 		assert(isnumber(scale), string.format(err_number, type(scale)))
-		if scale == 1 then return end
 
-		self.m_Radius = self.m_Radius * scale
+		if scale ~= 1 then
+			self.m_Radius = self.m_Radius * scale
 
-		if not self:IsValid() then return end
+			if self:IsValid() then
+				local x, y = self.m_X, self.m_Y
 
-		local x, y = self.m_X, self.m_Y
+				for i = 1, self.m_Vertices.Count do
+					local vertex = self.m_Vertices[i]
 
-		for i = 1, self.m_Vertices.Count do
-			local vertex = self.m_Vertices[i]
+					vertex.x = x + (vertex.x - x) * scale
+					vertex.y = y + (vertex.y - y) * scale
+				end
 
-			vertex.x = x + (vertex.x - x) * scale
-			vertex.y = y + (vertex.y - y) * scale
+				if self.m_Type == CIRCLE_OUTLINED and self.m_ChildCircle then
+					self.m_ChildCircle:Scale(scale)
+				end
+			end
 		end
 
-		if self.m_Type == CIRCLE_OUTLINED and self.m_ChildCircle then
-			self.m_ChildCircle:Scale(scale)
-		end
+		return self
 	end
 end
 
@@ -336,21 +349,24 @@ do
 
 	function CIRCLE:Rotate(rotation)
 		assert(isnumber(rotation), string.format(err_number, type(rotation)))
-		if rotation == 0 then return end
 
-		self.m_Rotation = self.m_Rotation + rotation
+		if rotation ~= 0 then
+			self.m_Rotation = self.m_Rotation + rotation
 
-		if not self:IsValid() then return end
+			if self:IsValid() then
+				local x, y = self.m_X, self.m_Y
+				local vertices = self.m_Vertices
+				local rotate_uv = self.m_RotateMaterial
 
-		local x, y = self.m_X, self.m_Y
-		local vertices = self.m_Vertices
-		local rotate_uv = self.m_RotateMaterial
+				RotateVertices(vertices, x, y, rotation, rotate_uv)
 
-		RotateVertices(vertices, x, y, rotation, rotate_uv)
-
-		if self.m_Type == CIRCLE_OUTLINED and self.m_ChildCircle then
-			self.m_ChildCircle:Rotate(rotation)
+				if self.m_Type == CIRCLE_OUTLINED and self.m_ChildCircle then
+					self.m_ChildCircle:Rotate(rotation)
+				end
+			end
 		end
+
+		return self
 	end
 end
 
@@ -372,57 +388,42 @@ do
 					self[dirty] = true
 				end
 
-				if isfunction(callback) then
+				if callback ~= nil then
 					local new = callback(self, self[varname], value)
 					value = new ~= nil and new or value
 				end
 
 				self[varname] = value
 			end
+
+			return self
 		end
 
 		CIRCLE[varname] = default
 	end
 
 	local function OffsetVerticesX(circle, old, new)
-		if not circle:IsValid() then return end
-
 		circle:Translate(new - old, 0)
 
 		if circle.m_Type == CIRCLE_OUTLINED and circle.m_ChildCircle then
-			OffsetVerticesX(circle.m_ChildCircle, old, new)
+			circle.m_ChildCircle:Translate(new - old, 0)
 		end
-
-		return new
 	end
 
 	local function OffsetVerticesY(circle, old, new)
-		if not circle:IsValid() then return end
-
 		circle:Translate(0, new - old)
 
 		if circle.m_Type == CIRCLE_OUTLINED and circle.m_ChildCircle then
-			OffsetVerticesY(circle.m_ChildCircle, old, new)
+			circle.m_ChildCircle:Translate(0, new - old)
 		end
-
-		return new
 	end
 
 	local function UpdateRotation(circle, old, new)
-		if not circle:IsValid() then return end
-
-		local vertices = circle.m_Vertices
-		local x, y = circle.m_X, circle.m_Y
-		local rotation = new - old
-		local rotate_uv = circle.m_RotateMaterial
-
-		RotateVertices(vertices, x, y, rotation, rotate_uv)
+		circle:Rotate(new - old)
 
 		if circle.m_Type == CIRCLE_OUTLINED and circle.m_ChildCircle then
-			UpdateRotation(circle.m_ChildCircle, old, new)
+			circle.m_ChildCircle:Rotate(new - old)
 		end
-
-		return new
 	end
 
 	-- These are set internally. Only use them if you know what you're doing.
@@ -449,10 +450,17 @@ do
 	AccessorFunc("OutlineWidth", 10, "m_Dirty")			-- The circle's outline width if Type is set to CIRCLE_OUTLINED.
 
 	function CIRCLE:SetPos(x, y)
-		x = tonumber(x) or 0
-		y = tonumber(y) or 0
+		x = tonumber(x) or self.m_X
+		y = tonumber(y) or self.m_Y
 
-		self:Translate(x - self.m_X, y - self.m_Y)
+		if self:IsValid() then
+			self:Translate(x - self.m_X, y - self.m_Y)
+		else
+			self.m_X = x
+			self.m_Y = y
+		end
+
+		return self
 	end
 
 	function CIRCLE:SetAngles(s, e)
@@ -463,6 +471,8 @@ do
 
 		self.m_StartAngle = s
 		self.m_EndAngle = e
+
+		return self
 	end
 
 	function CIRCLE:GetPos()
