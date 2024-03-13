@@ -26,7 +26,7 @@ local New do
 		circle:SetX(x)
 		circle:SetY(y)
 
-		circle:SetVertices({Count = 0})
+		circle:SetVertices({[0] = 0})
 
 		if t == CIRCLE_OUTLINED then
 			local outline_width = ...
@@ -60,7 +60,7 @@ local RotateVertices do
 		local c = math.cos(rotation)
 		local s = math.sin(rotation)
 
-		for i = 1, vertices.Count or #vertices do
+		for i = 1, vertices[0] or #vertices do
 			local vertex = vertices[i]
 			local vx, vy = vertex.x, vertex.y
 
@@ -93,9 +93,10 @@ local CalculateVertices do
 		assert(isnumber(end_angle), string.format(err_number, 6, type(end_angle)))
 		assert(isnumber(distance), string.format(err_number, 7, type(distance)))
 
-		local vertices = {Count = 0}
-		local step = distance / radius
+		local vertices = {}
+		local vertex_count = 0
 
+		local step = distance / radius
 		local rad_start_angle = math.rad(start_angle)
 		local rad_end_angle = math.rad(end_angle)
 		local rad_rotation = math.rad(rotation)
@@ -119,8 +120,8 @@ local CalculateVertices do
 				vertex.v = 0.5 + s / 2
 			end
 
-			vertices.Count = vertices.Count + 1
-			vertices[vertices.Count] = vertex
+			vertex_count = vertex_count + 1
+			vertices[vertex_count] = vertex
 		end
 
 		if end_angle - start_angle ~= 360 then
@@ -129,11 +130,13 @@ local CalculateVertices do
 				u = 0.5, v = 0.5,
 			})
 
-			vertices.Count = vertices.Count + 1
+			vertex_count = vertex_count + 1
 		else
 			table.remove(vertices)
-			vertices.Count = vertices.Count - 1
+			vertex_count = vertex_count - 1
 		end
+
+		vertices[0] = vertex_count
 
 		return vertices
 	end
@@ -150,7 +153,7 @@ end
 function CIRCLE:IsValid()
 	return (
 		not self.m_Dirty and
-		self.m_Vertices.Count >= 3 and
+		self.m_Vertices[0] >= 3 and
 		self.m_Radius >= 1 and
 		self.m_Distance >= 1
 	)
@@ -298,7 +301,7 @@ do
 			self.m_Y = self.m_Y + y
 
 			if self:IsValid() then
-				for i = 1, self.m_Vertices.Count do
+				for i = 1, self.m_Vertices[0] do
 					local vertex = self.m_Vertices[i]
 
 					vertex.x = vertex.x + x
@@ -327,7 +330,7 @@ do
 			if self:IsValid() then
 				local x, y = self.m_X, self.m_Y
 
-				for i = 1, self.m_Vertices.Count do
+				for i = 1, self.m_Vertices[0] do
 					local vertex = self.m_Vertices[i]
 
 					vertex.x = x + (vertex.x - x) * scale
@@ -481,6 +484,19 @@ do
 
 	function CIRCLE:GetAngles()
 		return self.m_StartAngle, self.m_EndAngle
+	end
+
+	function CIRCLE:SetVertexCount(count)
+		self:SetDistance(math.tau * self.m_Radius / math.floor(0.5 + count))
+		return self
+	end
+
+	function CIRCLE:GetVertexCount()
+		if self.m_Dirty then
+			return math.ceil(math.tau * self.m_Radius / self.m_Distance) -- rough estimate, only accounts for full circles, m_Vertices[0] will always be right.
+		end
+
+		return self.m_Vertices[0]
 	end
 end
 
