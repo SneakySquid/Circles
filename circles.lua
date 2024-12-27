@@ -407,26 +407,14 @@ do
 
 	local function OffsetVerticesX(circle, old, new)
 		circle:Translate(new - old, 0)
-
-		if circle.m_Type == CIRCLE_OUTLINED and circle.m_ChildCircle then
-			circle.m_ChildCircle:Translate(new - old, 0)
-		end
 	end
 
 	local function OffsetVerticesY(circle, old, new)
 		circle:Translate(0, new - old)
-
-		if circle.m_Type == CIRCLE_OUTLINED and circle.m_ChildCircle then
-			circle.m_ChildCircle:Translate(0, new - old)
-		end
 	end
 
 	local function UpdateRotation(circle, old, new)
 		circle:Rotate(new - old)
-
-		if circle.m_Type == CIRCLE_OUTLINED and circle.m_ChildCircle then
-			circle.m_ChildCircle:Rotate(new - old)
-		end
 	end
 
 	-- These are set internally. Only use them if you know what you're doing.
