@@ -1,6 +1,25 @@
 # Circles! 2 Available Now:
 https://steamcommunity.com/sharedfiles/filedetails/?id=2345345767
 
+### Benchmarks:
+Averaged over 50,000 frames.
+```
+FILLED
+	shader_filled                  total: 0.11241100s   avg: 0.02248220ms   fastest
+	drawpoly_filled_cached         total: 1.59281610s   avg: 0.31856322ms   +1316.96% slower
+	drawpoly_filled                total: 2.79356240s   avg: 0.55871248ms   +2385.13% slower
+
+OUTLINED
+	shader_outlined                total: 0.11182010s   avg: 0.02236402ms   fastest
+	drawpoly_outlined_cached       total: 2.77337130s   avg: 0.55467426ms   +2380.21% slower
+	drawpoly_outlined              total: 7.32663160s   avg: 1.46532632ms   +6452.16% slower
+
+BLURRED
+	shader_blurred                 total: 0.12647720s   avg: 0.02529544ms   fastest
+	drawpoly_blurred_cached        total: 2.07347360s   avg: 0.41469472ms   +1539.41% slower
+	drawpoly_blurred               total: 3.29715450s   avg: 0.65943090ms   +2506.92% slower
+```
+
 ---
 
 # Circles!
