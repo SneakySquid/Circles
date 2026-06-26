@@ -5,19 +5,19 @@ https://steamcommunity.com/sharedfiles/filedetails/?id=2345345767
 Averaged over 50,000 frames.
 ```
 FILLED
-	shader_filled                  total: 0.11241100s   avg: 0.02248220ms   fastest
-	drawpoly_filled_cached         total: 1.59281610s   avg: 0.31856322ms   +1316.96% slower
-	drawpoly_filled                total: 2.79356240s   avg: 0.55871248ms   +2385.13% slower
+	shader_filled                  total: 1.11235390s   avg: 0.02224708ms   fastest
+	drawpoly_filled_cached         total: 15.08045330s   avg: 0.30160907ms   +1255.72% slower
+	drawpoly_filled                total: 27.56120290s   avg: 0.55122406ms   +2377.74% slower
 
 OUTLINED
-	shader_outlined                total: 0.11182010s   avg: 0.02236402ms   fastest
-	drawpoly_outlined_cached       total: 2.77337130s   avg: 0.55467426ms   +2380.21% slower
-	drawpoly_outlined              total: 7.32663160s   avg: 1.46532632ms   +6452.16% slower
+	shader_outlined                total: 1.12631550s   avg: 0.02252631ms   fastest
+	drawpoly_outlined_cached       total: 27.66445510s   avg: 0.55328910ms   +2356.19% slower
+	drawpoly_outlined              total: 72.46823810s   avg: 1.44936476ms   +6334.10% slower
 
 BLURRED
-	shader_blurred                 total: 0.12647720s   avg: 0.02529544ms   fastest
-	drawpoly_blurred_cached        total: 2.07347360s   avg: 0.41469472ms   +1539.41% slower
-	drawpoly_blurred               total: 3.29715450s   avg: 0.65943090ms   +2506.92% slower
+	shader_blurred                 total: 1.24676350s   avg: 0.02493527ms   fastest
+	drawpoly_blurred_cached        total: 19.84194110s   avg: 0.39683882ms   +1491.48% slower
+	drawpoly_blurred               total: 32.52834620s   avg: 0.65056692ms   +2509.02% slower
 ```
 
 ---
